@@ -1,7 +1,7 @@
-@isTest
+@IsTest
 private class testUpdateAllAccounts {
 
-    @isTest static void test() {
+    @IsTest static void test() {
         Account acc1 = new Account(Name = 'Test Account 1');
         insert acc1;
 
