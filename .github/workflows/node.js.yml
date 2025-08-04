@@ -34,16 +34,18 @@ jobs:
           echo y  | npm install sfdx-git-delta@3.3.0 -g
 
       - name: 'Authentification Salesforce' # Vous devez avoir une connexion avec Salesforce pour pouvoir deployer le code à la dernière étape.
-        run:  sfdx auth:web:login --setdefaultusername --instanceurl https://mindful-shark-1vrgsf-dev-ed.trailblaze.lightning.force.com --setalias CONFIGURE_CI
+        run: |
+          echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.txt
+          sfdx auth:sfdxurl:store -f sfdx_auth.txt --setalias CONFIGURE_CI --setdefaultusername
 
       - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
         run: |
-          npm install sfdx-cli
-          echo y | node_modules/sfdx-cli/bin/run plugins:install sfdx-git-delta # A faire
+          mkdir -p .temp
+          sfdx sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/ # A faire
 
       - name: 'Déployer les métadonnées sur la branch main'
         if: github.ref == 'refs/heads/main'
         run:  |
-          node_modules/sfdx-cli/bin/run force:source:deploy -x package/package.xml -l RunLocalTests -u prod
+          sfdx force:source:deploy -x .temp/package/package.xml -l RunLocalTests -u CONFIGURE_CI
         # A faire déployer le code venant du fichier package.xml généré précédemment
 
