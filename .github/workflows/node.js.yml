@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - develop
+      - main
 
 jobs:
   sfdxvalidate:
@@ -19,33 +20,32 @@ jobs:
         node-version: [18.x]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 0
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install SFDX CLI and sfdx-git-delta plugin # Ce package va vous permettre de faire un delta entre votre branche et la branch ciblé. Voici la documentation : https://github.com/scolladon/sfdx-git-delta
+      - name: Install Salesforce CLI and sfdx-git-delta
         run: |
-          npm install -g @salesforce/cli@latest
-          sfdx plugins:install sfdx-git-delta
+          npm install -g @salesforce/cli
+          npm install -g sfdx-git-delta
 
-      - name: 'Authentification Salesforce' # Vous devez avoir une connexion avec Salesforce pour pouvoir deployer le code à la dernière étape.
+      - name: Authenticate to Salesforce
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.txt
-          sfdx auth:sfdxurl:store -f sfdx_auth.txt --setalias CONFIGURE_CI --setdefaultusername
+          sf org login sfdx-url --sfdx-url-file sfdx_auth.txt --alias CONFIGURE_CI --set-default
 
-      - name: 'Generate metadata delta pull request'  # Utilisez le plug-in sfdx-git-delta pour effectuer un delta, generer le package xml dans un fichier temporaire ex : .temp
+      - name: Generate metadata delta
         run: |
           mkdir -p .temp
-          sfdx sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/ # A faire
+          sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/
 
-      - name: 'Déployer les métadonnées sur la branch main'
+      - name: Deploy metadata to Salesforce (main branch only)
         if: github.ref == 'refs/heads/main'
-        run:  |
-          sfdx force:source:deploy -x .temp/package/package.xml -l RunLocalTests -u CONFIGURE_CI
-        # A faire déployer le code venant du fichier package.xml généré précédemment
-
+        run: |
+          sf project deploy start --manifest .temp/package/package.xml --test-level RunLocalTests --target-org CONFIGURE_CI --wait 10 --ignore-conflicts
