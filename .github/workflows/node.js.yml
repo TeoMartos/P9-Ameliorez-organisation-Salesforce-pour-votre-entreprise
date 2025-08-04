@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - develop
-
   push:
     branches:
       - develop
@@ -33,17 +32,17 @@ jobs:
           npm install -g sfdx-cli
           sfdx plugins:install sfdx-git-delta
 
-      - name: Authentificate to Salesforce
+      - name: Authenticate to Salesforce
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.txt
-          sfdx auth:sfdxurl:store -f sfdx_auth.txt --setalias CONFIGURE_CI --setdefaultusername
+          sfdx force:auth:sfdxurl:store -f sfdx_auth.txt --setalias CONFIGURE_CI --setdefaultusername
 
       - name: Generate metadata delta
         run: |
           mkdir -p .temp
-          sf sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/
+          sfdx sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/
 
       - name: Deploy metadata on main
         if: github.ref == 'refs/heads/main'
         run: |
-          sf project deploy start --manifest .temp/package/package.xml --target-org CONFIGURE_CI --test-level RunLocalTests
+          sfdx force:source:deploy -x .temp/package/package.xml --targetusername CONFIGURE_CI --testlevel RunLocalTests
