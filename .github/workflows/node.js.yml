@@ -36,7 +36,7 @@ jobs:
       - name: Authentificate to Salesforce
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.txt
-          sf org login sfdx-url --sfdx-url-file sfdx_auth.txt --alias CONFIGURE_CI --set-default
+          sfdx auth:sfdxurl:store -f sfdx_auth.txt --setalias CONFIGURE_CI --setdefaultusername
 
       - name: Generate metadata delta
         run: |
