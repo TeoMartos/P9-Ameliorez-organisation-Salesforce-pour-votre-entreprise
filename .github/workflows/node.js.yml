@@ -43,7 +43,10 @@ jobs:
       - name: Generate metadata delta
         run: |
           mkdir -p .temp
-          sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/
+          sf sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/
+
+      - name: Check SFDX plugins
+        run: sf plugins
 
       - name: Deploy metadata to Salesforce (main branch only)
         if: github.ref == 'refs/heads/main'
