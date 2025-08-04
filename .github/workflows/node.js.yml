@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - develop
-      - main
 
 jobs:
   sfdxvalidate:
@@ -20,8 +19,7 @@ jobs:
         node-version: [18.x]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -33,9 +31,9 @@ jobs:
       - name: Install Salesforce CLI and sfdx-git-delta
         run: |
           npm install -g @salesforce/cli
-          npm install -g sfdx-git-delta
+          sf plugins install sfdx-git-delta
 
-      - name: Authenticate to Salesforce
+      - name: Authentificate to Salesforce
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.txt
           sf org login sfdx-url --sfdx-url-file sfdx_auth.txt --alias CONFIGURE_CI --set-default
@@ -45,10 +43,7 @@ jobs:
           mkdir -p .temp
           sf sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/
 
-      - name: Check SFDX plugins
-        run: sf plugins
-
-      - name: Deploy metadata to Salesforce (main branch only)
+      - name: Deploy metadata on main
         if: github.ref == 'refs/heads/main'
         run: |
-          sf project deploy start --manifest .temp/package/package.xml --test-level RunLocalTests --target-org CONFIGURE_CI --wait 10 --ignore-conflicts
+          sf project deploy start --manifest .temp/package/package.xml --target-org CONFIGURE_CI --test-level RunLocalTests
