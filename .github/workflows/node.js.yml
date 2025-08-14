@@ -1,68 +1,48 @@
-name: Deploy and Validate Metadata
+name: Validate and Deploy (sfdx)
 
 on:
   pull_request:
-    branches: [main]
+    branches: [develop]     # PR vers develop => validate
   push:
-    branches: [main]
+    branches: [develop, main]  # push develop => validate ; push main => deploy
 
 jobs:
-  sfdxvalidate:
-    name: "Run SFDX Validate/Deploy"
+  sfdx:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18.x
+      - uses: actions/setup-node@v4
+        with: { node-version: 18.x }
 
-      - name: Install Salesforce CLI + sgd
+      - name: Install SFDX + sgd
         run: |
-          npm install -g @salesforce/cli@latest
-          npm install -g sfdx-git-delta@3.3.0
-          sf --version
+          npm install -g sfdx-cli
+          sfdx plugins:install sfdx-git-delta --force
 
-      - name: Authenticate to Salesforce
+      - name: Auth
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.txt
-          sf org login sfdx-url --sfdx-url-file sfdx_auth.txt --alias CONFIGURE_CI --set-default
+          sfdx force:auth:sfdxurl:store -f sfdx_auth.txt --setalias CONFIGURE_CI --setdefaultusername
 
-      - name: Generate metadata delta (.temp/package/package.xml)
+      - name: Delta
         run: |
           mkdir -p .temp
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             FROM="${{ github.event.pull_request.base.sha }}"
             TO="${{ github.event.pull_request.head.sha }}"
           else
-            FROM="HEAD^"
-            TO="HEAD"
+            FROM="HEAD^"; TO="HEAD"
           fi
-          sgd --from "$FROM" --to "$TO" --output .temp --generate-delta --source force-app/
-          ls -R .temp || true
-          cat .temp/package/package.xml || true
+          sfdx sgd:source:delta --from "$FROM" --to "$TO" --output .temp --generate-delta --source force-app/
 
-      - name: Validate (PR to main) - RunLocalTests
-        if: github.event_name == 'pull_request'
+      - name: Validate on develop
+        if: github.ref == 'refs/heads/develop'
         run: |
-          sf project deploy start \
-            --target-org CONFIGURE_CI \
-            --manifest .temp/package/package.xml \
-            --test-level RunLocalTests \
-            --ignore-conflicts \
-            --wait 30 \
-            --dry-run
+          sfdx force:source:deploy -x .temp/package/package.xml --targetusername CONFIGURE_CI --checkonly --testlevel RunLocalTests
 
-      - name: Deploy (push to main) - RunLocalTests
-        if: github.event_name == 'push'
+      - name: Deploy on main
+        if: github.ref == 'refs/heads/main'
         run: |
-          sf project deploy start \
-            --target-org CONFIGURE_CI \
-            --manifest .temp/package/package.xml \
-            --test-level RunLocalTests \
-            --ignore-conflicts \
-            --wait 60
+          sfdx force:source:deploy -x .temp/package/package.xml --targetusername CONFIGURE_CI --testlevel RunLocalTests
