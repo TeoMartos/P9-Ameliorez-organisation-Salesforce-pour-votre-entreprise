@@ -5,7 +5,7 @@ trigger UpdateAccountCA on Order (after update) {
         Order oldOrd = Trigger.oldMap.get(ord.Id);
 
         if (ord.Status == 'Activated' && oldOrd.Status != 'Activated' && ord.AccountId != null) {
-            accountIdsToUpdate.add(ord.AccountId);//test
+            accountIdsToUpdate.add(ord.AccountId);
         }
     }
 

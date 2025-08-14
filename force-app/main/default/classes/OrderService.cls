@@ -7,7 +7,6 @@ public with sharing class OrderService {
     public static Decimal getSumOrdersByAccount(Id accountId) {
         Decimal totalAmount = 0;
 
-        // Ici, on récupère une liste, donc on utilise List<Order>
         List<Order> orders = OrderSelector.getActivatedOrdersByAccountId(accountId);
 
         for (Order ord : orders) {
