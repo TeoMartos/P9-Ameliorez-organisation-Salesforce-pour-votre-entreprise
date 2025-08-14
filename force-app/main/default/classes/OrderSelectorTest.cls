@@ -7,7 +7,7 @@ public class OrderSelectorTest {
 
     @IsTest
     static void test_getActivatedOrdersByAccountId() {
-        // Création d'un compte //test
+        // Création d'un compte
         Account acc = new Account(Name = 'Test Account');
         insert acc;
 
