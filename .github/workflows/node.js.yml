@@ -2,47 +2,68 @@ name: Validate and Deploy (sfdx)
 
 on:
   pull_request:
-    branches: [develop]     # PR vers develop => validate
+    branches: [develop]          # PR vers develop => validate
   push:
-    branches: [develop, main]  # push develop => validate ; push main => deploy
+    branches: [develop, main]    # push develop => validate ; push main => deploy
 
 jobs:
   sfdx:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
-        with: { node-version: 18.x }
+        with:
+          node-version: 18.x
 
       - name: Install SFDX + sgd
         run: |
           npm install -g sfdx-cli
+          sfdx --version
           sfdx plugins:install sfdx-git-delta --force
+          sfdx plugins
 
       - name: Auth
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > sfdx_auth.txt
           sfdx force:auth:sfdxurl:store -f sfdx_auth.txt --setalias CONFIGURE_CI --setdefaultusername
 
-      - name: Delta
-        run: |
-          mkdir -p .temp
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FROM="${{ github.event.pull_request.base.sha }}"
-            TO="${{ github.event.pull_request.head.sha }}"
-          else
-            FROM="HEAD^"; TO="HEAD"
-          fi
-          sfdx sgd:source:delta --from "$FROM" --to "$TO" --output .temp --generate-delta --source force-app/
-
-      - name: Validate on develop
+      # ✅ VALIDATION SIMPLE SUR DEVELOP (PAS DE DELTA, DONC PAS DE package.xml)
+      - name: Validate on develop (RunLocalTests)
         if: github.ref == 'refs/heads/develop'
         run: |
-          sfdx force:source:deploy -x .temp/package/package.xml --targetusername CONFIGURE_CI --checkonly --testlevel RunLocalTests
+          sfdx force:source:deploy \
+            -p force-app \
+            --targetusername CONFIGURE_CI \
+            --checkonly \
+            --testlevel RunLocalTests
 
-      - name: Deploy on main
+      # (Optionnel) Delta pour le déploiement sur main
+      - name: Build delta (only for main)
         if: github.ref == 'refs/heads/main'
         run: |
-          sfdx force:source:deploy -x .temp/package/package.xml --targetusername CONFIGURE_CI --testlevel RunLocalTests
+          mkdir -p .temp
+          sfdx sgd:source:delta --from HEAD^ --to HEAD --output .temp --generate-delta --source force-app/
+          ls -R .temp || true
+          cat .temp/package/package.xml || true
+
+      # ✅ DÉPLOIEMENT SUR MAIN
+      # Choix A (pro, avec delta) -> décommente si tu veux utiliser le delta
+      # - name: Deploy on main (RunLocalTests) via delta
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     sfdx force:source:deploy \
+      #       -x .temp/package/package.xml \
+      #       --targetusername CONFIGURE_CI \
+      #       --testlevel RunLocalTests
+
+      # Choix B (simple) : déployer tout force-app (recommandé pour ta soutenance)
+      - name: Deploy on main (RunLocalTests) full folder
+        if: github.ref == 'refs/heads/main'
+        run: |
+          sfdx force:source:deploy \
+            -p force-app \
+            --targetusername CONFIGURE_CI \
+            --testlevel RunLocalTests
