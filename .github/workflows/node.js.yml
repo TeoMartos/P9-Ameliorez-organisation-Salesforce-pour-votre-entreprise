@@ -7,10 +7,11 @@ on:
   push:
     branches:
       - develop
+      - main
 
 jobs:
   sfdxvalidate:
-    name: "Run SFDX Validate"
+    name: "Validate or Deploy"
     runs-on: ubuntu-latest
 
     strategy:
@@ -42,6 +43,13 @@ jobs:
           mkdir -p .temp
           sfdx sgd:source:delta --to HEAD --from HEAD^ --output .temp --generate-delta --source force-app/
 
+      # Validation sur develop
+      - name: Validate metadata on develop
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          sfdx force:source:deploy -x .temp/package/package.xml --targetusername CONFIGURE_CI --checkonly --testlevel RunLocalTests
+
+      # Déploiement sur main
       - name: Deploy metadata on main
         if: github.ref == 'refs/heads/main'
         run: |
