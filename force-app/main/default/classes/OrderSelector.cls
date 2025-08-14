@@ -5,7 +5,7 @@
 public with sharing class OrderSelector {
     @AuraEnabled(Cacheable=true)
     public static List<Order> getActivatedOrdersByAccountId(Id accountId) {
-        return [
+        return [ //test
                 SELECT TotalAmount
                 FROM Order
                 WHERE AccountId = :accountId
