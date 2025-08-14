@@ -6,6 +6,8 @@ public with sharing class OrderService {
     @AuraEnabled(Cacheable=true)
     public static Decimal getSumOrdersByAccount(Id accountId) {
         Decimal totalAmount = 0;
+
+        // Ici, on récupère une liste, donc on utilise List<Order>
         List<Order> orders = OrderSelector.getActivatedOrdersByAccountId(accountId);
 
         for (Order ord : orders) {
