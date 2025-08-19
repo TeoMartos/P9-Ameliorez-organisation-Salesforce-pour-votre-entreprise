@@ -1,4 +1,4 @@
-trigger CalculMontant on Order (before insert, before update) {
+trigger AmountCalculation on Order (before insert, before update) {
 	for (Order ord : Trigger.new) {
 
 		if (ord.TotalAmount == null || ord.TotalAmount == 0) {

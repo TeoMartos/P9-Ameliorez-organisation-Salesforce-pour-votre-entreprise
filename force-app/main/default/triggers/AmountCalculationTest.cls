@@ -3,7 +3,7 @@
  */
 
 @IsTest
-private class CalculMontantTest {
+private class AmountCalculationTest {
 
     @IsTest
     static void test_calculMontant_onInsert() {

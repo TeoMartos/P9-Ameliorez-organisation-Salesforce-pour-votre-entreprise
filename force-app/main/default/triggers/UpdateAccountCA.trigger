@@ -7,7 +7,7 @@ trigger UpdateAccountCA on Order (after update) {
         if (ord.Status == 'Activated' && oldOrd.Status != 'Activated' && ord.AccountId != null) {
             accountIdsToUpdate.add(ord.AccountId);
         }
-    }//test
+    }
 
     if (!accountIdsToUpdate.isEmpty()) {
         AccountService.updateChiffreAffaireFromOrders(accountIdsToUpdate);
